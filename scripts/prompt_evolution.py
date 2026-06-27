@@ -273,7 +273,7 @@ def initial_state():
 def start_game(player_prompt, neg_prompt, steps, cfg, width, height, mutation_rate, freq_min, freq_max, auto_save, fix_seed, seed_val, state):
     """
     Outputs: img_a, img_b, prompt_a_text, prompt_b_text,
-             pick_a, pick_b, status, progress, game_state, start_btn
+             pick_a, pick_b, status, game_state, start_btn
     """
     NO_IMAGES = (
         None, None, "", "",
@@ -284,12 +284,12 @@ def start_game(player_prompt, neg_prompt, steps, cfg, width, height, mutation_ra
 
     vocab = None
     for status, progress, result in build_clip_vocab_with_progress(freq_min, freq_max):
-        yield (*NO_IMAGES, status, progress, state, BTN_WAIT)
+        yield (*NO_IMAGES, status, state, BTN_WAIT)
         if result is not None:
             vocab = result
 
     if not vocab:
-        yield (*NO_IMAGES, "⚠️ Could not build vocab — is a model loaded?", 1.0, state, BTN_WAIT)
+        yield (*NO_IMAGES, "⚠️ Could not build vocab — is a model loaded?", state, BTN_WAIT)
         return
 
     base = seed_prompt(player_prompt, vocab)
@@ -305,10 +305,10 @@ def start_game(player_prompt, neg_prompt, steps, cfg, width, height, mutation_ra
 
     seed = int(seed_val) if fix_seed else -1
 
-    yield (*NO_IMAGES, "🖼️ Generating image A…", 1.0, state, BTN_WAIT)
+    yield (*NO_IMAGES, "🖼️ Generating image A…", state, BTN_WAIT)
     img_a = generate_image(prompt_a, neg_prompt, steps, cfg, width, height, seed)
 
-    yield (img_a, None, prompt_a, "", gr.update(visible=False), gr.update(visible=False), "🖼️ Generating image B…", 1.0, state, BTN_WAIT)
+    yield (img_a, None, prompt_a, "", gr.update(visible=False), gr.update(visible=False), "🖼️ Generating image B…", state, BTN_WAIT)
     img_b = generate_image(prompt_b, neg_prompt, steps, cfg, width, height, seed)
 
     state = initial_state()
@@ -325,7 +325,6 @@ def start_game(player_prompt, neg_prompt, steps, cfg, width, height, mutation_ra
         prompt_a, prompt_b,
         gr.update(visible=True), gr.update(visible=True),
         "✅ Round 1 — pick the better image!",
-        1.0,
         state,
         BTN_DONE,
     )
@@ -379,13 +378,14 @@ def on_ui_tabs():
     css = """
     #pe-layout { display: flex !important; flex-direction: row !important; gap: 12px; align-items: flex-start; }
     #pe-left { display: flex; flex-direction: column; gap: 8px; width: 340px; min-width: 340px; height: 100vh; max-height: 100vh; overflow: hidden; }
-    #pe-right { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; max-height: 100vh; }
+    #pe-right { flex: 1; min-width: 0; max-width: 100%; overflow: hidden; overflow-y: auto; max-height: 100vh; box-sizing: border-box; }
     #pe-img-a, #pe-img-b { flex: 1; min-height: 0; overflow: hidden; }
     #pe-img-a img, #pe-img-b img { width: 100% !important; height: 100% !important; object-fit: contain !important; }
     #pe-img-a .image-container, #pe-img-b .image-container { height: 100% !important; }
     #pe-pick-a, #pe-pick-b { flex-shrink: 0; }
     #pe-status textarea { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #pe-right * { max-width: 100%; box-sizing: border-box; }
+    #pe-right .gradio-slider { max-width: 100%; }
     """
 
     with gr.Blocks(analytics_enabled=False) as ui:
@@ -411,7 +411,6 @@ def on_ui_tabs():
                 start_btn = gr.Button("▶ Start Game", variant="primary")
 
                 status_text = gr.Textbox(label="Status", interactive=False, elem_id="pe-status", max_lines=1)
-                progress_bar = gr.Slider(minimum=0, maximum=1, value=0, step=0.01, label="Progress", interactive=False)
 
                 with gr.Accordion("⚙️ Settings", open=True):
                     with gr.Row():
@@ -472,7 +471,7 @@ def on_ui_tabs():
         start_btn.click(
             start_game,
             inputs=[player_prompt, neg_prompt, steps, cfg, width, height, mutation_rate, freq_min, freq_max, auto_save, fix_seed, seed_input, game_state],
-            outputs=[img_a, img_b, prompt_a_text, prompt_b_text, pick_a, pick_b, status_text, progress_bar, game_state, start_btn],
+            outputs=[img_a, img_b, prompt_a_text, prompt_b_text, pick_a, pick_b, status_text, game_state, start_btn],
         )
 
         def pick_and_update(choice):
