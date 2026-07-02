@@ -166,9 +166,11 @@ def build_clip_vocab_with_progress(freq_min: float, freq_max: float):
                     if tag_type != 0 or not (lo <= post_count <= hi):
                         continue
                     name = row[0].strip()
-                    name_plain = name.replace("_", " ")
-                    if name.lower() in clip_vocab or name_plain.lower() in clip_vocab:
-                        tags.append(name_plain)
+                    # Keep multi-word tags as-is ("long_hair" -> "long hair").
+                    # No CLIP-vocab filter: the model knows danbooru tags as
+                    # phrases; requiring single-token matches wrongly dropped
+                    # nearly all 2+ word tags.
+                    tags.append(name.replace("_", " "))
             if tags:
                 _vocab_cache[model_key] = tags
                 yield f"✅ Vocab ready — {len(tags):,} danbooru tags", 1.0, tags
